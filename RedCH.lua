@@ -1,4 +1,3 @@
-lua
 --[[
   redstone_signal_controller.lua
   Программа для управления силой редстоун-сигнала через улучшенный монитор с помощью кнопок "+" и "−".
@@ -23,7 +22,10 @@ validateSide(REDSTONE_SIDE, "редстоуна")
 -- Глобальные переменные
 local minPower, maxPower = 0, 15
 local powerSetting = "redstone_power"
-local power = settings.get(powerSetting) or minPower
+local loadedPower = tonumber(settings.get(powerSetting)) or minPower
+if loadedPower < minPower then loadedPower = minPower end
+if loadedPower > maxPower then loadedPower = maxPower end
+local power = loadedPower
 
 -- Получаем объекты
 local monitor = peripheral.wrap(MONITOR_SIDE)
@@ -104,14 +106,6 @@ end
 local function setRedstonePower(p)
   if not redstone or type(redstone.setAnalogOutput) ~= "function" then
     error("Redstone API недоступен. Проверьте окружение.")
-  end
-  local sides = {"left", "right", "top", "bottom", "front", "back"}
-  local valid = false
-  for _, side in ipairs(sides) do
-    if side == REDSTONE_SIDE then valid = true break end
-  end
-  if not valid then
-    error("Недопустимая сторона для редстоуна: " .. tostring(REDSTONE_SIDE))
   end
   redstone.setAnalogOutput(REDSTONE_SIDE, p)
   local actual = redstone.getAnalogOutput and redstone.getAnalogOutput(REDSTONE_SIDE) or nil
