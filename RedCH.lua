@@ -1,25 +1,25 @@
 --[[
   redstone_signal_controller.lua
-  Программа для управления силой редстоун-сигнала через улучшенный монитор с помощью кнопок "+" и "-".
-  Для CC:Tweaked.
---]]
+  Program for controlling redstone signal strength via an advanced monitor with "+" and "-" buttons.
+  For CC:Tweaked.
+]]
 
--- Настройки
-local MONITOR_SIDE = "top"      -- Сторона, где подключён монитор (измените при необходимости)
-local REDSTONE_SIDE = "back"    -- Сторона, куда подаётся сигнал (измените при необходимости)
+-- Settings
+local MONITOR_SIDE = "top"      -- Side where the monitor is connected (change if needed)
+local REDSTONE_SIDE = "back"    -- Side where the redstone signal is output (change if needed)
 
--- Проверка валидности сторон через функцию
+-- Side validation function
 local function validateSide(side, name)
   local validSides = {top=true, bottom=true, left=true, right=true, front=true, back=true}
   if not validSides[side] then
-    error("Некорректная сторона " .. name .. ": " .. tostring(side))
+    error("Invalid side for " .. name .. ": " .. tostring(side))
   end
 end
 
-validateSide(MONITOR_SIDE, "монитора")
-validateSide(REDSTONE_SIDE, "редстоуна")
+validateSide(MONITOR_SIDE, "monitor")
+validateSide(REDSTONE_SIDE, "redstone")
 
--- Глобальные переменные
+-- Global variables
 local minPower, maxPower = 0, 15
 local powerSetting = "redstone_power"
 local loadedPower = tonumber(settings.get(powerSetting)) or minPower
@@ -27,28 +27,27 @@ if loadedPower < minPower then loadedPower = minPower end
 if loadedPower > maxPower then loadedPower = maxPower end
 local power = loadedPower
 
--- Получаем объекты
+-- Get peripherals
 local monitor = peripheral.wrap(MONITOR_SIDE)
 if not monitor or type(monitor.setTextScale) ~= "function" then
-  error("Переферийное устройство на стороне " .. MONITOR_SIDE .. " не является монитором.")
+  error("Peripheral on side " .. MONITOR_SIDE .. " is not a monitor.")
 end
--- monitor is now guaranteed to be valid; no need to check again elsewhere
 
 monitor.setTextScale(1.5)
 monitor.setBackgroundColor(colors.black)
 monitor.setTextColor(colors.white)
 
--- Кэшируем часто используемые методы монитора
+-- Cache commonly used monitor methods
 local setBackgroundColor = monitor.setBackgroundColor
 local setTextColor = monitor.setTextColor
 local setCursorPos = monitor.setCursorPos
 local write = monitor.write
 local clear = monitor.clear
 
--- Размеры монитора
+-- Monitor size
 local w, h = monitor.getSize()
 
--- Константы для размеров кнопок
+-- Button constants
 local BUTTON_WIDTH = 5
 local BUTTON_HEIGHT = 3
 local BUTTON_Y = math.floor(h/2) - math.floor(BUTTON_HEIGHT/2)
@@ -65,7 +64,7 @@ local btnPlus = {
   y2 = BUTTON_Y + BUTTON_HEIGHT - 1
 }
 
--- Универсальная функция отрисовки одной кнопки с параметрами цвета
+-- Universal button drawing function with color parameters
 local function drawButton(btn, label, bgColor, labelColor)
   setBackgroundColor(bgColor or colors.gray)
   for y=btn.y1,btn.y2 do
@@ -82,30 +81,30 @@ local function drawButton(btn, label, bgColor, labelColor)
   setTextColor(colors.white)
 end
 
--- Функция отрисовки интерфейса
+-- UI drawing function
 local function drawUI()
   clear()
   drawButton(btnMinus, "-", colors.gray, colors.white)
   drawButton(btnPlus, "+", colors.gray, colors.white)
-  -- Текущее значение
+  -- Current value
   setCursorPos(math.floor(w/2)-3, math.floor(h/2))
   setTextColor(colors.yellow)
   write(string.format("%2d", power))
   setTextColor(colors.white)
-  -- Подпись
+  -- Label
   setCursorPos(2, h)
   write("Redstone Power")
 end
 
--- Проверка попадания в кнопку
+-- Button hit test
 local function isInButton(x, y, btn)
   return x >= btn.x1 and x <= btn.x2 and y >= btn.y1 and y <= btn.y2
 end
 
--- Установка сигнала с обработкой ошибок
+-- Set redstone power with error handling
 local function setRedstonePower(p)
   if not redstone or type(redstone.setAnalogOutput) ~= "function" then
-    error("Redstone API недоступен. Проверьте окружение.")
+    error("Redstone API not available. Check your environment.")
   end
   redstone.setAnalogOutput(REDSTONE_SIDE, p)
   local actual = redstone.getAnalogOutput and redstone.getAnalogOutput(REDSTONE_SIDE) or nil
@@ -117,13 +116,13 @@ local function setRedstonePower(p)
   end
 end
 
--- Сохранение значения мощности через settings API
+-- Save power value using settings API
 local function savePower()
   settings.set(powerSetting, power)
   settings.save()
 end
 
--- Основной цикл с graceful termination и debounce
+-- Main loop with graceful termination and debounce
 local running = true
 parallel.waitForAny(
   function()
